@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: shellcheck
+        run: shellcheck entrypoint.sh
+
+      - name: hadolint
+        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: actionlint
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: validate v3.0 spec
+        uses: ./
+        with:
+          file: tests/fixtures/valid-v3_0.yaml
+
+      - name: validate v2 spec
+        uses: ./
+        with:
+          file: tests/fixtures/valid-v2.yaml
+
+      - name: validate with ignored checks
+        uses: ./
+        with:
+          file: tests/fixtures/valid-v3_0.yaml
+          ignore: missing-tags unused-tags
+
+      - name: validate must fail on invalid spec
+        id: invalid
+        continue-on-error: true
+        uses: ./
+        with:
+          file: tests/fixtures/invalid.yaml
+
+      - name: assert invalid spec failed
+        if: steps.invalid.outcome != 'failure'
+        run: |
+          echo "::error::Expected validate to fail on tests/fixtures/invalid.yaml"
+          exit 1
+
+      - name: convert v3.0 to v3.2
+        uses: ./
+        with:
+          subcommand: convert
+          file: tests/fixtures/valid-v3_0.yaml
+          to: v3_2
+          output-file: converted.yaml
+
+      - name: assert converted output looks like v3.2
+        run: |
+          test -s converted.yaml || { echo "::error::converted.yaml is empty or missing"; exit 1; }
+          grep -q '^openapi: *3\.2' converted.yaml || {
+            echo "::error::converted.yaml does not declare openapi 3.2"
+            cat converted.yaml
+            exit 1
+          }
+
+      - name: convert without 'to' must fail
+        id: convert-noto
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: convert
+          file: tests/fixtures/valid-v3_0.yaml
+
+      - name: assert convert without 'to' failed
+        if: steps.convert-noto.outcome != 'failure'
+        run: |
+          echo "::error::Expected convert without 'to' input to fail"
+          exit 1
