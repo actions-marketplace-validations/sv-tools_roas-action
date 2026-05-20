@@ -77,9 +77,10 @@ The action's `Dockerfile` is a multi-stage build:
 
 1. `FROM ghcr.io/sv-tools/roas:latest AS roas` pulls the upstream distroless
    image only as a source for the `roas` binary.
-2. The final stage is `debian:bookworm-slim` (matches the upstream's Debian 12 /
-   glibc runtime) with `ca-certificates` installed so `--load http` can validate
-   TLS when following remote `$ref`s.
+2. The final stage is `debian:trixie-slim` (Debian 13, GLIBC 2.41 — required
+   because the upstream `roas` binary is linked against GLIBC ≥ 2.39) with
+   `ca-certificates` installed so `--load http` can validate TLS when
+   following remote `$ref`s.
 3. `entrypoint.sh` translates the action's `INPUT_*` env vars into the
    appropriate `roas` argv and `exec`s the binary.
 

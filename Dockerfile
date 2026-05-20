@@ -1,6 +1,6 @@
 FROM ghcr.io/sv-tools/roas:0.4.0 AS roas
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 # Don't pin ca-certificates: we want the latest CA bundle for TLS roots,
 # and Debian's revision-suffixed versions are GC'd from mirrors over time.
 # hadolint ignore=DL3008
