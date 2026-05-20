@@ -1,4 +1,4 @@
-name: 'roas'
+name: 'Roas OpenAPI Action'
 description: 'Validate and convert OpenAPI specs with roas'
 branding:
   icon: 'check-circle'
