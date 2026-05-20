@@ -1,0 +1,35 @@
+name: 'roas'
+description: 'Validate and convert OpenAPI specs with roas'
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+inputs:
+  subcommand:
+    description: 'roas subcommand: validate or convert'
+    default: 'validate'
+  file:
+    description: 'Path to the OpenAPI spec (JSON or YAML)'
+    required: true
+  from:
+    description: 'Force input spec version (e.g. v2, v3_0, v3_1, v3_2)'
+  to:
+    description: 'Target version for convert (e.g. v3_1, v3_2). Required when subcommand=convert.'
+  load:
+    description: 'Whitespace-separated $ref loaders to enable: file, http'
+  ignore:
+    description: 'Whitespace-separated validation checks to skip (validate only)'
+  format:
+    description: 'Force input format: json or yaml'
+  output-format:
+    description: 'Force output format for convert: json or yaml'
+  output-file:
+    description: 'Write convert output to this path instead of stdout'
+  print:
+    description: 'Echo parsed spec on stdout (validate only)'
+    default: 'false'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+    INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
