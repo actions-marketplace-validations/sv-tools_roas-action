@@ -54,10 +54,12 @@ jobs:
           file: tests/fixtures/invalid.yaml
 
       - name: assert invalid spec failed
-        if: steps.invalid.outcome != 'failure'
         run: |
-          echo "::error::Expected validate to fail on tests/fixtures/invalid.yaml"
-          exit 1
+          if [[ "${{ steps.invalid.outcome }}" != "failure" ]]; then
+            echo "Expected validate to fail on tests/fixtures/invalid.yaml, got outcome=${{ steps.invalid.outcome }}"
+            exit 1
+          fi
+          echo "OK: validate correctly rejected invalid.yaml"
 
       - name: convert v3.0 to v3.2
         uses: ./
@@ -85,7 +87,9 @@ jobs:
           file: tests/fixtures/valid-v3_0.yaml
 
       - name: assert convert without 'to' failed
-        if: steps.convert-noto.outcome != 'failure'
         run: |
-          echo "::error::Expected convert without 'to' input to fail"
-          exit 1
+          if [[ "${{ steps.convert-noto.outcome }}" != "failure" ]]; then
+            echo "Expected convert without 'to' to fail, got outcome=${{ steps.convert-noto.outcome }}"
+            exit 1
+          fi
+          echo "OK: convert correctly rejected missing 'to' input"
