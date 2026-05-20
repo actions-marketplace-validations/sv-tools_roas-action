@@ -30,3 +30,6 @@ inputs:
 runs:
   using: 'docker'
   image: 'Dockerfile'
+  env:
+    INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+    INPUT_OUTPUT_FORMAT: ${{ inputs.output-format }}
