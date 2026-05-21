@@ -24,6 +24,14 @@ if [[ "$sub" == "convert" ]]; then
   fi
   args+=(--to "$INPUT_TO")
   [[ -n "${INPUT_OUTPUT_FORMAT:-}" ]] && args+=(--output-format "$INPUT_OUTPUT_FORMAT")
+  while IFS= read -r v; do
+    [[ -n "$v" ]] && args+=(--merge "$v")
+  done <<< "${INPUT_MERGE:-}"
+  for v in ${INPUT_MERGE_OPTIONS:-}; do args+=(--merge-option "$v"); done
+  if [[ "${INPUT_COLLAPSE:-false}" == "true" ]]; then
+    args+=(--collapse)
+    for v in ${INPUT_LOAD:-}; do args+=(--load "$v"); done
+  fi
 fi
 
 if [[ "$sub" == "validate" ]]; then
