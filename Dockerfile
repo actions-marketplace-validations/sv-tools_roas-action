@@ -1,4 +1,4 @@
-FROM ghcr.io/sv-tools/roas:0.6.1 AS src
+FROM ghcr.io/sv-tools/roas:0.6.2 AS src
 
 FROM debian:trixie-slim
 # Don't pin ca-certificates: we want the latest CA bundle for TLS roots,
