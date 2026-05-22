@@ -36,7 +36,7 @@ Upconvert a spec to OpenAPI 3.2 and write the result next to the source:
   with:
     subcommand: convert
     file: openapi.yaml
-    to: v3_2
+    to: v3.2
     output-file: openapi.v3_2.yaml
 ```
 
@@ -47,7 +47,7 @@ Layer overlay specs on top of a base via `merge`:
   with:
     subcommand: convert
     file: openapi.yaml
-    to: v3_2
+    to: v3.2
     merge: |
       overlays/prod.yaml
       overlays/eu.yaml
@@ -60,7 +60,7 @@ Layer overlay specs on top of a base via `merge`:
 |-----------------|----------|------------|------------|-----------------------------------------------------------------------------------------------|
 | `subcommand`    | no       | `validate` | both       | `validate` or `convert`.                                                                      |
 | `file`          | yes      | —          | both       | Path to the OpenAPI spec (JSON or YAML), relative to the repo root.                           |
-| `from`          | no       | —          | both       | Force the input spec version. One of `v2`, `v3_0`, `v3_1`, `v3_2`.                            |
+| `from`          | no       | —          | both       | Force the input spec version. One of `v2`, `v3.0`, `v3.1`, `v3.2`.                            |
 | `to`            | yes\*    | —          | convert    | Target version for `convert`. Required when `subcommand: convert`.                            |
 | `merge`         | no       | —          | convert    | Newline-separated list of overlay specs to merge on top of the base after version conversion. |
 | `merge-options` | no       | —          | convert    | Whitespace-separated merge options (requires `merge`). See [merge options](#merge-options).   |
