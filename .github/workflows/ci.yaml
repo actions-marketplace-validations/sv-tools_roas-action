@@ -12,25 +12,25 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: shellcheck
         run: shellcheck entrypoint.sh
 
       - name: hadolint
-        uses: hadolint/hadolint-action@2332a7b74a6de0dda2e2221d575162eba76ba5e5 # v3.3.0
+        uses: hadolint/hadolint-action@2a66e89f53d0771bb131a7fa31f3136336094aa6 # v3.4.0
         with:
           dockerfile: Dockerfile
 
       - name: actionlint
-        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: validate v3.0 spec
+      - name: validate v3.0 spec (default subcommand)
         uses: ./
         with:
           file: tests/fixtures/valid-v3_0.yaml
@@ -38,11 +38,13 @@ jobs:
       - name: validate v2 spec
         uses: ./
         with:
+          subcommand: openapi validate
           file: tests/fixtures/valid-v2.yaml
 
       - name: validate with ignored checks
         uses: ./
         with:
+          subcommand: openapi validate
           file: tests/fixtures/valid-v3_0.yaml
           ignore: missing-tags unused-tags
 
@@ -51,6 +53,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
+          subcommand: openapi validate
           file: tests/fixtures/invalid.yaml
 
       - name: assert invalid spec failed
@@ -64,7 +67,7 @@ jobs:
       - name: convert v3.0 to v3.2
         uses: ./
         with:
-          subcommand: convert
+          subcommand: openapi convert
           file: tests/fixtures/valid-v3_0.yaml
           to: v3.2
           output-file: converted.yaml
@@ -81,7 +84,7 @@ jobs:
       - name: convert with merge overlay and collapse
         uses: ./
         with:
-          subcommand: convert
+          subcommand: openapi convert
           file: tests/fixtures/valid-v3_0.yaml
           to: v3.2
           merge: tests/fixtures/overlay-v3_0.yaml
@@ -95,6 +98,30 @@ jobs:
           grep -q '/ping:' merged.yaml || { echo "merged.yaml missing /ping path from base"; cat merged.yaml; exit 1; }
           grep -q '/pong:' merged.yaml || { echo "merged.yaml missing /pong path from overlay"; cat merged.yaml; exit 1; }
           echo "OK: merge combined base and overlay paths"
+
+      - name: legacy 'validate' spelling still works
+        uses: ./
+        with:
+          subcommand: validate
+          file: tests/fixtures/valid-v3_0.yaml
+
+      - name: legacy 'convert' spelling still works
+        uses: ./
+        with:
+          subcommand: convert
+          file: tests/fixtures/valid-v3_0.yaml
+          to: v3.2
+          output-file: converted-legacy.yaml
+
+      - name: assert the legacy convert spelling produced v3.2
+        run: |
+          test -s converted-legacy.yaml || { echo "::error::converted-legacy.yaml is empty or missing"; exit 1; }
+          grep -q '^openapi: *3\.2' converted-legacy.yaml || {
+            echo "::error::converted-legacy.yaml does not declare openapi 3.2"
+            cat converted-legacy.yaml
+            exit 1
+          }
+          echo "OK: the bare 'convert' spelling still reaches 'openapi convert'"
 
       - name: overlay validate
         uses: ./
@@ -123,7 +150,7 @@ jobs:
       - name: convert with apply overlay
         uses: ./
         with:
-          subcommand: convert
+          subcommand: openapi convert
           file: tests/fixtures/valid-v3_0.yaml
           to: v3.2
           apply: tests/fixtures/overlay-doc-v1_0.yaml
@@ -149,16 +176,16 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
-          subcommand: convert
+          subcommand: openapi convert
           file: tests/fixtures/valid-v3_0.yaml
 
       - name: assert convert without 'to' failed
         run: |
           if [[ "${{ steps.convert-noto.outcome }}" != "failure" ]]; then
-            echo "Expected convert without 'to' to fail, got outcome=${{ steps.convert-noto.outcome }}"
+            echo "Expected openapi convert without 'to' to fail, got outcome=${{ steps.convert-noto.outcome }}"
             exit 1
           fi
-          echo "OK: convert correctly rejected missing 'to' input"
+          echo "OK: openapi convert correctly rejected missing 'to' input"
 
       - name: overlay apply without 'overlay' must fail
         id: overlay-noov
@@ -231,3 +258,153 @@ jobs:
             exit 1
           fi
           echo "OK: arazzo convert correctly rejected missing 'to' input"
+
+      - name: arazzo validate the run fixture
+        uses: ./
+        with:
+          subcommand: arazzo validate
+          file: tests/fixtures/arazzo-run.arazzo.yaml
+
+      - name: arazzo list
+        uses: ./
+        with:
+          subcommand: arazzo list
+          file: tests/fixtures/arazzo-run.arazzo.yaml
+          output-file: workflows.txt
+
+      - name: assert arazzo list named both workflows
+        run: |
+          test -s workflows.txt || { echo "::error::workflows.txt is empty or missing"; exit 1; }
+          for id in echoOnce echoTwice; do
+            grep -q "^$id\$" workflows.txt || {
+              echo "::error::workflows.txt does not list $id"
+              cat workflows.txt
+              exit 1
+            }
+          done
+          grep -q 'inputs: message (string)' workflows.txt || {
+            echo "::error::workflows.txt does not describe the workflow inputs"
+            cat workflows.txt
+            exit 1
+          }
+          echo "OK: arazzo list named both workflows and what they take"
+
+      - name: arazzo run without 'workflow' must fail when several are offered
+        id: arazzo-run-noworkflow
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: arazzo run
+          file: tests/fixtures/arazzo-run.arazzo.yaml
+          load: file
+
+      - name: assert arazzo run without 'workflow' failed
+        run: |
+          if [[ "${{ steps.arazzo-run-noworkflow.outcome }}" != "failure" ]]; then
+            echo "Expected arazzo run to fail without 'workflow', got outcome=${{ steps.arazzo-run-noworkflow.outcome }}"
+            exit 1
+          fi
+          echo "OK: arazzo run correctly asked which workflow to run"
+
+      - name: arazzo run without a source description must fail
+        id: arazzo-run-nosource
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: arazzo run
+          file: tests/fixtures/arazzo-run.arazzo.yaml
+          workflow: echoOnce
+
+      - name: assert arazzo run without a source description failed
+        run: |
+          if [[ "${{ steps.arazzo-run-nosource.outcome }}" != "failure" ]]; then
+            echo "Expected arazzo run to fail with neither 'source' nor 'load', got outcome=${{ steps.arazzo-run-nosource.outcome }}"
+            exit 1
+          fi
+          echo "OK: arazzo run correctly refused to run with no source description"
+
+      - name: asyncapi validate
+        uses: ./
+        with:
+          subcommand: asyncapi validate
+          file: tests/fixtures/asyncapi-v2_6.yaml
+
+      - name: asyncapi validate must fail on an unused channel parameter
+        id: asyncapi-invalid
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: asyncapi validate
+          file: tests/fixtures/asyncapi-unused-parameter.yaml
+
+      - name: assert invalid asyncapi document failed
+        run: |
+          if [[ "${{ steps.asyncapi-invalid.outcome }}" != "failure" ]]; then
+            echo "Expected asyncapi validate to fail on tests/fixtures/asyncapi-unused-parameter.yaml, got outcome=${{ steps.asyncapi-invalid.outcome }}"
+            exit 1
+          fi
+          echo "OK: asyncapi validate correctly rejected asyncapi-unused-parameter.yaml"
+
+      - name: asyncapi validate with the check relaxed
+        uses: ./
+        with:
+          subcommand: asyncapi validate
+          file: tests/fixtures/asyncapi-unused-parameter.yaml
+          check: unused-channel-parameter
+
+      - name: asyncapi convert v2.6 to v3.0
+        uses: ./
+        with:
+          subcommand: asyncapi convert
+          file: tests/fixtures/asyncapi-v2_6.yaml
+          to: v3.0
+          output-file: converted-asyncapi.yaml
+
+      - name: assert converted asyncapi declares version 3.0
+        run: |
+          test -s converted-asyncapi.yaml || { echo "::error::converted-asyncapi.yaml is empty or missing"; exit 1; }
+          grep -qE '^asyncapi:[[:space:]]*.?3\.0' converted-asyncapi.yaml || {
+            echo "::error::converted-asyncapi.yaml does not declare asyncapi 3.0"
+            cat converted-asyncapi.yaml
+            exit 1
+          }
+          grep -q 'address: light/measured' converted-asyncapi.yaml || {
+            echo "::error::converted-asyncapi.yaml missing the v3 channel address"
+            cat converted-asyncapi.yaml
+            exit 1
+          }
+          echo "OK: asyncapi convert produced a 3.0 document"
+
+      - name: asyncapi convert with 'strict' must fail on a lossy conversion
+        id: asyncapi-strict
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: asyncapi convert
+          file: tests/fixtures/asyncapi-v2_6.yaml
+          to: v3.0
+          strict: 'true'
+
+      - name: assert strict asyncapi convert failed
+        run: |
+          if [[ "${{ steps.asyncapi-strict.outcome }}" != "failure" ]]; then
+            echo "Expected asyncapi convert with strict to fail on a lossy 2.6 conversion, got outcome=${{ steps.asyncapi-strict.outcome }}"
+            exit 1
+          fi
+          echo "OK: asyncapi convert correctly refused a lossy conversion under 'strict'"
+
+      - name: asyncapi convert without 'to' must fail
+        id: asyncapi-noto
+        continue-on-error: true
+        uses: ./
+        with:
+          subcommand: asyncapi convert
+          file: tests/fixtures/asyncapi-v2_6.yaml
+
+      - name: assert asyncapi convert without 'to' failed
+        run: |
+          if [[ "${{ steps.asyncapi-noto.outcome }}" != "failure" ]]; then
+            echo "Expected asyncapi convert without 'to' to fail, got outcome=${{ steps.asyncapi-noto.outcome }}"
+            exit 1
+          fi
+          echo "OK: asyncapi convert correctly rejected missing 'to' input"
